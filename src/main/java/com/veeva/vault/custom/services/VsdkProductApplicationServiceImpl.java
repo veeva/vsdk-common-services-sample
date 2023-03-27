@@ -14,20 +14,25 @@
  */
 package com.veeva.vault.custom.services;
 
+import com.veeva.vault.custom.userdefinedclasses.VsdkProductApplicationObject;
 import com.veeva.vault.sdk.api.core.*;
 import com.veeva.vault.sdk.api.data.Record;
-import com.veeva.vault.sdk.api.data.RecordService;
+import com.veeva.vault.sdk.api.data.RecordChange;
 import com.veeva.vault.sdk.api.document.DocumentService;
 import com.veeva.vault.sdk.api.document.DocumentVersion;
+import com.veeva.vault.sdk.api.job.JobItem;
+import com.veeva.vault.sdk.api.query.Query;
+import com.veeva.vault.sdk.api.query.QueryService;
 
 import java.util.List;
+import java.util.Set;
 
 @UserDefinedServiceInfo
 public class VsdkProductApplicationServiceImpl implements VsdkProductApplicationService {
 
     public void createNewProductApplication(List<Record> recordList, String country) {
 
-        RecordService recordService = ServiceLocator.locate(RecordService.class);
+        VsdkRecordService recordService = ServiceLocator.locate(VsdkRecordService.class);
 
         List<Record> records = VaultCollections.newList();
         recordList.stream().forEach(record -> {
@@ -43,35 +48,13 @@ public class VsdkProductApplicationServiceImpl implements VsdkProductApplication
             records.add(productApplicationRecord);
 
             if (records.size() == 500) {
-                recordService.batchSaveRecords(recordList)
-                        .onErrors(batchOperationErrors ->{
-                            batchOperationErrors.stream().findFirst().ifPresent(error -> {
-                                String errMsg = error.getError().getMessage();
-                                int errPosition = error.getInputPosition();
-                                String name = recordList.get(errPosition).getValue("name__v", ValueType.STRING);
-                                throw new RollbackException("OPERATION_NOT_ALLOWED", "Unable to create: " + name +
-                                        "because of " + errMsg);
-                            });
-                        })
-                        .execute();
-
+                recordService.batchSaveRecords(records);
                 records.clear();
             }
         });
 
         if (!records.isEmpty()) {
-            recordService.batchSaveRecords(recordList)
-                    .onErrors(batchOperationErrors ->{
-                        batchOperationErrors.stream().findFirst().ifPresent(error -> {
-                            String errMsg = error.getError().getMessage();
-                            int errPosition = error.getInputPosition();
-                            String name = recordList.get(errPosition).getValue("name__v", ValueType.STRING);
-                            throw new RollbackException("OPERATION_NOT_ALLOWED", "Unable to create: " + name +
-                                    "because of " + errMsg);
-                        });
-                    })
-                    .execute();
-
+            recordService.batchSaveRecords(records);
             records.clear();
         }
 

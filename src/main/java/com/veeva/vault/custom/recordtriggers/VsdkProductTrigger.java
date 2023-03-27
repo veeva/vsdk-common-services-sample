@@ -16,15 +16,10 @@
 package com.veeva.vault.custom.recordtriggers;
 
 import com.veeva.vault.custom.services.VsdkProductService;
-import com.veeva.vault.sdk.api.core.LogService;
 import com.veeva.vault.sdk.api.core.ServiceLocator;
-import com.veeva.vault.sdk.api.core.ValueType;
-import com.veeva.vault.sdk.api.core.VaultCollectors;
 import com.veeva.vault.sdk.api.data.*;
 import com.veeva.vault.sdk.api.http.HttpRequestContentType;
 import com.veeva.vault.sdk.api.http.HttpService;
-
-import java.util.List;
 
 @RecordTriggerInfo(object = "vsdk_product__c",
         events = {RecordEvent.AFTER_UPDATE})
@@ -35,5 +30,6 @@ public class VsdkProductTrigger implements RecordTrigger {
         VsdkProductService productService = ServiceLocator.locate(VsdkProductService.class);
 
         productService.updateProductApplicationProductType(context.getRecordChanges());
+
     }
 }
