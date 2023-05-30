@@ -41,4 +41,7 @@ The `VsdkProductApplicationObject` provides methods to get and set field values 
 
 Deploy the [VPK](https://developer.veevavault.com/sdk/#Deploy_VPK) included within the project. This package contains the configuration and code for this project.
 To make changes to the code and deploy those changes to a Vault, use the [Vault Java SDK Maven Plugin](https://github.com/veeva/vaultjavasdk-maven-plugin). The pom.xml file includes the plugin details, but you must update the configuration values.
- 
+
+##Veeva Connect
+Further discussion about Vault Java SDK can be held in our [Vault for Developers community](https://devcommunity.veevavault.com) on Veeva Connect.
+
