@@ -16,6 +16,7 @@ package com.veeva.vault.custom.services;
 
 import com.veeva.vault.sdk.api.core.*;
 import com.veeva.vault.sdk.api.data.Record;
+import com.veeva.vault.sdk.api.data.RecordBatchSaveRequest;
 import com.veeva.vault.sdk.api.data.RecordService;
 import com.veeva.vault.sdk.api.document.DocumentService;
 import com.veeva.vault.sdk.api.document.DocumentVersion;
@@ -28,22 +29,29 @@ public class VsdkProductApplicationServiceImpl implements VsdkProductApplication
     public void createNewProductApplication(List<Record> recordList, String country) {
 
         RecordService recordService = ServiceLocator.locate(RecordService.class);
+        LogService logger = ServiceLocator.locate(LogService.class);
 
         List<Record> records = VaultCollections.newList();
-        recordList.stream().forEach(record -> {
+        logger.debug("Number of Product records: {}", recordList.size());
+
+        //Create a new Product Application record and set the product__c and country__c fields based on
+        //the Product record values.
+        recordList.forEach(record -> {
             List<String> productType = record.getValue("product_type__c", ValueType.PICKLIST_VALUES);
 
             Record productApplicationRecord = recordService.newRecord("vsdk_product_application__c");
             productApplicationRecord.setValue("product__c", record.getValue("id", ValueType.STRING));
             productApplicationRecord.setValue("country__c", country);
 
-            if (productType.get(0) != null) {
+            if (productType != null) {
                 productApplicationRecord.setValue("product_type__c", productType);
             }
             records.add(productApplicationRecord);
 
+            //Batch save records based on the RecordService limitations
             if (records.size() == 500) {
-                recordService.batchSaveRecords(recordList)
+                RecordBatchSaveRequest saveRequest = recordService.newRecordBatchSaveRequestBuilder().withRecords(records).build();
+                recordService.batchSaveRecords(saveRequest)
                         .onErrors(batchOperationErrors ->{
                             batchOperationErrors.stream().findFirst().ifPresent(error -> {
                                 String errMsg = error.getError().getMessage();
@@ -59,8 +67,10 @@ public class VsdkProductApplicationServiceImpl implements VsdkProductApplication
             }
         });
 
+        //Save any remaining records
         if (!records.isEmpty()) {
-            recordService.batchSaveRecords(recordList)
+            RecordBatchSaveRequest saveRequest = recordService.newRecordBatchSaveRequestBuilder().withRecords(records).build();
+            recordService.batchSaveRecords(saveRequest)
                     .onErrors(batchOperationErrors ->{
                         batchOperationErrors.stream().findFirst().ifPresent(error -> {
                             String errMsg = error.getError().getMessage();
@@ -83,6 +93,7 @@ public class VsdkProductApplicationServiceImpl implements VsdkProductApplication
 
         List<DocumentVersion> documentVersionsToCreate = VaultCollections.newList();
 
+        //Create a Product Application type of document and relate it to the record in the list
         recordList.stream().forEach(record -> {
             DocumentVersion documentVersion = documentService.newDocument();
 

@@ -14,14 +14,18 @@
  */
 package com.veeva.vault.custom.jobs;
 
+import com.veeva.vault.custom.params.VsdkProductApplicationJobParam;
 import com.veeva.vault.custom.services.VsdkCustomNotificationService;
 import com.veeva.vault.custom.userdefinedclasses.VsdkProductApplicationObject;
 import com.veeva.vault.sdk.api.core.*;
 import com.veeva.vault.sdk.api.data.Record;
+import com.veeva.vault.sdk.api.data.RecordBatchSaveRequest;
 import com.veeva.vault.sdk.api.data.RecordService;
 import com.veeva.vault.sdk.api.job.*;
 import com.veeva.vault.sdk.api.query.Query;
 import com.veeva.vault.sdk.api.query.QueryService;
+import com.veeva.vault.sdk.api.token.TokenRequest;
+import com.veeva.vault.sdk.api.token.TokenService;
 
 import java.util.List;
 import java.util.Set;
@@ -33,20 +37,28 @@ public class VsdkProductApplicationUpdateJob implements Job {
 
         QueryService queryService = ServiceLocator.locate(QueryService.class);
         JobLogger jobLogger = context.getJobLogger();
+        TokenService tokenService = ServiceLocator.locate(TokenService.class);
 
-        String productApplications = context.getJobParameter("product_application_ids", JobParamValueType.STRING.STRING);
+        VsdkProductApplicationJobParam productApplicationParam = context.getJobParameter("product_applications", VsdkProductApplicationJobParam.class);
 
+        TokenRequest productApplicationTokens = tokenService.newTokenRequestBuilder()
+                .withValue("Custom.ids", productApplicationParam.getProductApplicationIds())
+                .build();
+
+        //Query the Product Application records that were set as input parameters
         jobLogger.log("Querying product applications for parent ids");
         Query productQuery = queryService.newQueryBuilder()
                 .withSelect(VaultCollections.asList("id", "product__c"))
                 .withFrom("vsdk_product_application__c")
-                .withWhere("id contains ('" + productApplications + "')")
+                .withWhere("id contains ('${Custom.ids}')")
                 .build();
 
+        //Create a Product Application User-Defined Class and set the data for each record returned from the query
         List<VsdkProductApplicationObject> productApplicationObjects = VaultCollections.newList();
         List<String> productsToQuery = VaultCollections.newList();
         queryService.query(queryService.newQueryExecutionRequestBuilder()
                 .withQuery(productQuery)
+                .withTokenRequest(productApplicationTokens)
                 .build()).onSuccess(queryExecutionResponse -> {
                     queryExecutionResponse.streamResults().forEach(queryExecutionResult -> {
                         String product = queryExecutionResult.getValue("product__c", ValueType.STRING);
@@ -54,6 +66,7 @@ public class VsdkProductApplicationUpdateJob implements Job {
                         productApplication.setId(queryExecutionResult.getValue("id", ValueType.STRING));
                         productApplication.setProduct(product);
                         productApplicationObjects.add(productApplication);
+
                         productsToQuery.add(product);
                     });
         }).onError(queryOperationError -> {
@@ -61,6 +74,7 @@ public class VsdkProductApplicationUpdateJob implements Job {
                     + " failed because " + queryOperationError.getMessage());
         }).execute();
 
+        //Query the parent Product records to retrieve the product_type__c field values.
         jobLogger.log("Querying products for product types");
         Query productApplicationQuery = queryService.newQueryBuilder()
                 .withSelect(VaultCollections.asList("id", "product_type__c"))
@@ -72,12 +86,19 @@ public class VsdkProductApplicationUpdateJob implements Job {
                 .withQuery(productApplicationQuery)
                 .build()).onSuccess(queryExecutionResponse -> {
                     queryExecutionResponse.streamResults().forEach(queryExecutionResult -> {
-                        List<String> productType = queryExecutionResult.getValue("product_type__c", ValueType.PICKLIST_VALUES);
+                        List<String> productTypePicklist = queryExecutionResult.getValue("product_type__c", ValueType.PICKLIST_VALUES);
+                        String productType = null;
+
+                        if (productTypePicklist != null) {
+                            productType = productTypePicklist.get(0);
+                        }
+
                         String product = queryExecutionResult.getValue("id", ValueType.STRING);
 
                         if (productType != null) {
+                            String finalProductType = productType;
                             productApplicationObjects.stream().filter(productApplication -> productApplication.getProduct().equals(product))
-                                    .forEach(productApplication -> productApplication.setProductType(productType));
+                                    .forEach(productApplication -> productApplication.setProductType(VaultCollections.asList(finalProductType)));
                         }
                     });
         }).onError(queryOperationError -> {
@@ -85,6 +106,7 @@ public class VsdkProductApplicationUpdateJob implements Job {
                     + " failed because " + queryOperationError.getMessage());
         }).execute();
 
+        //Create a Job Item for each Product Application record and the new product_type__c field value
         jobLogger.log("Setting Job Items");
         List<JobItem> jobItems = VaultCollections.newList();
         productApplicationObjects.stream().forEach(productApplication -> {
@@ -104,6 +126,7 @@ public class VsdkProductApplicationUpdateJob implements Job {
         RecordService recordService = ServiceLocator.locate(RecordService.class);
         JobLogger jobLogger = context.getJobLogger();
 
+        //Update each Product Application record with the new product_type__c field value
         jobLogger.log("Updating VSDK Product Application records");
         List<Record> records = VaultCollections.newList();
         context.getCurrentTask().getItems().stream().forEach(jobItem -> {
@@ -115,7 +138,8 @@ public class VsdkProductApplicationUpdateJob implements Job {
             records.add(record);
 
             if (records.size() == 500) {
-                recordService.batchSaveRecords(records)
+                RecordBatchSaveRequest saveRequest = recordService.newRecordBatchSaveRequestBuilder().withRecords(records).build();
+                recordService.batchSaveRecords(saveRequest)
                         .onErrors(batchOperationErrors ->{
                             batchOperationErrors.stream().findFirst().ifPresent(error -> {
                                 String errMsg = error.getError().getMessage();
@@ -132,7 +156,8 @@ public class VsdkProductApplicationUpdateJob implements Job {
         });
 
         if (!records.isEmpty()) {
-            recordService.batchSaveRecords(records)
+            RecordBatchSaveRequest saveRequest = recordService.newRecordBatchSaveRequestBuilder().withRecords(records).build();
+            recordService.batchSaveRecords(saveRequest)
                     .onErrors(batchOperationErrors ->{
                         batchOperationErrors.stream().findFirst().ifPresent(error -> {
                             String errMsg = error.getError().getMessage();
@@ -149,20 +174,18 @@ public class VsdkProductApplicationUpdateJob implements Job {
 
     }
 
+    //If the job completes successfully then log the result
     public void completeWithSuccess(JobCompletionContext context) {
-
-        LogService logger = ServiceLocator.locate(LogService.class);
-        logger.debug("All tasks completed successfully");
-
     }
 
+    //If the job completes with errors, this sends out a notification to the initiating user
     public void completeWithError(JobCompletionContext context) {
 
         VsdkCustomNotificationService notificationService = ServiceLocator.locate(VsdkCustomNotificationService.class);
         JobLogger jobLogger = context.getJobLogger();
 
         Set<String> recipients = VaultCollections.newSet();
-        recipients.add("10692823");
+        recipients.add(RequestContext.get().getInitiatingUserId());
 
         jobLogger.log("Some Job Tasks have failed. Sending failure notification");
         notificationService.sendProductApplicationJobFailureNotification(context, recipients);

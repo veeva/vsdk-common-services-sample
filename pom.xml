@@ -6,7 +6,7 @@
     <artifactId>vault-object-record-sdk-example</artifactId>
     <version>1.0-SNAPSHOT</version>
     <properties>
-        <vault.sdk.version>[22.3.0-release0, 22.3.0-release1000000]</vault.sdk.version>
+        <vault.sdk.version>[23.1.0-release0, 23.1.0-release1000000]</vault.sdk.version>
     </properties>
     <repositories>
         <repository>
@@ -34,6 +34,11 @@
             <artifactId>vault-sdk</artifactId>
             <version>${vault.sdk.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.veeva.vault.sdk.debugger</groupId>
+            <artifactId>vault-sdk-debugger</artifactId>
+            <version>${vault.sdk.version}</version>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
@@ -49,16 +54,10 @@
             <plugin>
                 <groupId>com.veeva.vault.sdk</groupId>
                 <artifactId>vaultjavasdk-maven-plugin</artifactId>
-                <version>22.3.0</version>
+                <version>23.1.1</version>
                 <configuration>
-                    <vaultDNS></vaultDNS>
-                    <username></username>
-                    <password></password>
-                    <deploymentOption></deploymentOption>
-                    <source>
-                        <packages></packages>
-                        <classes></classes>
-                    </source>
+                    <pluginSettingsFilePath>${project.basedir}${file.separator}src${file.separator}main${file.separator}resources${file.separator}plugin_settings_file.json</pluginSettingsFilePath>
+                    <vapilSettingsFilePath>${project.basedir}${file.separator}src${file.separator}main${file.separator}resources${file.separator}vapil_settings_file.json</vapilSettingsFilePath>
                 </configuration>
             </plugin>
         </plugins>

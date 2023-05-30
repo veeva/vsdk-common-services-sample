@@ -22,7 +22,7 @@ import com.veeva.vault.sdk.api.core.ValueType;
 
 @RecordActionInfo(object = "vsdk_product__c",
         label = "VSDK Create Product Application",
-        usages = Usage.UNSPECIFIED,
+        usages = Usage.USER_ACTION,
         user_input_object = "vsdk_create_product_application__c")
 public class VsdkCreateProductApplicationAction implements RecordAction {
 
@@ -37,7 +37,5 @@ public class VsdkCreateProductApplicationAction implements RecordAction {
         String country = context.getUserInputRecord().getValue("country__c", ValueType.STRING);
 
         productApplicationService.createNewProductApplication(context.getRecords(), country);
-
-
     }
 }

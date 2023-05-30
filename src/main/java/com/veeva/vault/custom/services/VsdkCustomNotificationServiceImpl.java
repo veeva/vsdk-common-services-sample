@@ -32,13 +32,18 @@ public class VsdkCustomNotificationServiceImpl implements VsdkCustomNotification
         NotificationService notificationService = ServiceLocator.locate(NotificationService.class);
 
         List<String> failedProductApplicationUpdates = VaultCollections.newList();
-        context.getTasks().stream().filter(jobTask -> jobTask.getTaskOutput().getState().equals(TaskState.ERRORS_ENCOUNTERED))
-                .forEach(failedJobTask -> failedJobTask.getItems().stream()
-                        .forEach(jobItem -> failedProductApplicationUpdates.add(jobItem.getValue("id", JobValueType.STRING))));
 
+        //Get the tasks that errored and get the ID of the Product Application record that was not updated successfully
+        context.getErrorTasks().forEach(failedJobTask ->
+                failedJobTask.getItems().forEach(jobItem ->
+                        failedProductApplicationUpdates.add(jobItem.getValue("id", JobValueType.STRING))
+                )
+        );
+        //Set the recipients of the failure notification
         NotificationParameters notificationParameters = notificationService.newNotificationParameters();
         notificationParameters.setRecipientsByUserIds(recipientIds);
 
+        //Set the notification template and send the failure notification
         NotificationTemplate notificationTemplate = notificationService.newNotificationTemplate()
                 .setTemplateName("vsdk_product_application_failure__c")
                 .setTokenValue("failed_tasks", String.valueOf(context.getJobResult().getNumberFailedTasks()))
