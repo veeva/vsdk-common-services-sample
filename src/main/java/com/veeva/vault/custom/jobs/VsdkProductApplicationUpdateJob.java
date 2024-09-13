@@ -50,7 +50,7 @@ public class VsdkProductApplicationUpdateJob implements Job {
         Query productQuery = queryService.newQueryBuilder()
                 .withSelect(VaultCollections.asList("id", "product__c"))
                 .withFrom("vsdk_product_application__c")
-                .withWhere("id contains ('${Custom.ids}')")
+                .withWhere("id contains (')")
                 .build();
 
         //Create a Product Application User-Defined Class and set the data for each record returned from the query
