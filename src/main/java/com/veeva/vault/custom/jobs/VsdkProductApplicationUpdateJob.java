@@ -50,7 +50,7 @@ public class VsdkProductApplicationUpdateJob implements Job {
         Query productQuery = queryService.newQueryBuilder()
                 .withSelect(VaultCollections.asList("id", "product__c"))
                 .withFrom("vsdk_product_application__c")
-                .withWhere("id contains (')")
+                .withWhere("id contains (${Custom.ids})")
                 .build();
 
         //Create a Product Application User-Defined Class and set the data for each record returned from the query
@@ -74,15 +74,20 @@ public class VsdkProductApplicationUpdateJob implements Job {
                     + " failed because " + queryOperationError.getMessage());
         }).execute();
 
+        TokenRequest productTokens = tokenService.newTokenRequestBuilder()
+                .withValue("Custom.ids", productsToQuery)
+                .build();
+
         //Query the parent Product records to retrieve the product_type__c field values.
         jobLogger.log("Querying products for product types");
         Query productApplicationQuery = queryService.newQueryBuilder()
                 .withSelect(VaultCollections.asList("id", "product_type__c"))
                 .withFrom("vsdk_product__c")
-                .withWhere("id contains ('" + String.join("','", productsToQuery) + "')")
+                .withWhere("id contains (${Custom.ids})")
                 .build();
 
         queryService.query(queryService.newQueryExecutionRequestBuilder()
+                .withTokenRequest(productTokens)
                 .withQuery(productApplicationQuery)
                 .build()).onSuccess(queryExecutionResponse -> {
                     queryExecutionResponse.streamResults().forEach(queryExecutionResult -> {
