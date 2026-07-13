@@ -39,9 +39,12 @@ public class VsdkCustomNotificationServiceImpl implements VsdkCustomNotification
                         failedProductApplicationUpdates.add(jobItem.getValue("id", JobValueType.STRING))
                 )
         );
-        //Set the recipients of the failure notification
+        //Set the recipients of the failure notification by their User record IDs
+        List<String> recipientUserIds = VaultCollections.newList();
+        recipientUserIds.addAll(recipientIds);
+
         NotificationParameters notificationParameters = notificationService.newNotificationParameters();
-        notificationParameters.setRecipientsByUserIds(recipientIds);
+        notificationParameters.setRecipientsByUsers(recipientUserIds);
 
         //Set the notification template and send the failure notification
         NotificationTemplate notificationTemplate = notificationService.newNotificationTemplate()

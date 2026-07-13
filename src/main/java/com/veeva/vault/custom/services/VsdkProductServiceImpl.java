@@ -17,7 +17,8 @@ package com.veeva.vault.custom.services;
 import com.veeva.vault.custom.params.VsdkProductApplicationJobParam;
 import com.veeva.vault.sdk.api.core.*;
 import com.veeva.vault.sdk.api.data.RecordChange;
-import com.veeva.vault.sdk.api.job.JobParameters;
+import com.veeva.vault.sdk.api.job.JobQueueParameters;
+import com.veeva.vault.sdk.api.job.JobQueueRequest;
 import com.veeva.vault.sdk.api.job.JobService;
 import com.veeva.vault.sdk.api.query.Query;
 import com.veeva.vault.sdk.api.query.QueryService;
@@ -53,7 +54,7 @@ public class VsdkProductServiceImpl implements VsdkProductService {
             Query productApplicationQuery = queryService.newQueryBuilder()
                     .withSelect(VaultCollections.asList("id"))
                     .withFrom("vsdk_product_application__c")
-                    .withWhere("product__c contains ('${Custom.products}')")
+                    .withWhere("product__c contains (${Custom.products})")
                     .build();
 
             //Add the Product Application record IDs to a list to be used later
@@ -72,14 +73,21 @@ public class VsdkProductServiceImpl implements VsdkProductService {
             if (!productApplicationList.isEmpty()) {
 
                 //Initiate an asynchronous job with the Product Application IDs retrieved above as a parameter
-                JobParameters jobParameters = jobService.newJobParameters("vsdk_product_application_update_job__c");
-
                 VsdkProductApplicationJobParam productApplicationParam = new VsdkProductApplicationJobParam();
                 productApplicationParam.setProductApplicationIds(productApplicationList);
 
-                jobParameters.setValue("product_applications", productApplicationParam);
+                //Build the job queue parameters, attaching the Product Application UDC as a named parameter
+                JobQueueParameters jobQueueParameters = jobService.newJobQueueParametersBuilder()
+                        .appendParameter("product_applications", productApplicationParam)
+                        .build();
 
-                jobService.run(jobParameters);
+                //Build the job queue request for the target job and enqueue it for asynchronous execution
+                JobQueueRequest jobQueueRequest = jobService.newJobQueueRequestBuilder()
+                        .withJobName("vsdk_product_application_update_job__c")
+                        .withJobQueueParameters(jobQueueParameters)
+                        .build();
+
+                jobService.jobQueueOperation(jobQueueRequest).execute();
             }
         }
     }
