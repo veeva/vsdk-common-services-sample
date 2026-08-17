@@ -12,7 +12,7 @@ Entry point interfaces define how and when Vault executes custom logic, while se
 
 ### Services
 
-This project uses Veeva-recommended design patterns by defining business logic in user-defined services (UDS) to manage runtime memory and provide shared code to SDK triggers, actions, and processors. Learn more about UDS in the [Vault Developer Portal](https://developer.veevavault.com/sdk/#User_Defined_Services).
+This project uses Veeva-recommended design patterns by defining business logic in user-defined services (UDS) to manage runtime memory and provide shared code to SDK triggers, actions, and processors. Learn more about UDS in the [Vault Developer Portal](https://general.veevavault.dev/vault-sdk/shared-code/uds/).
 
 ![Project Structure Flowchart](/vault-object-record-sdk-example-chart.png)
 
@@ -35,11 +35,11 @@ This project applies services logic to Vault data through implementations of the
 
 ### User Defined Class
 
-The `VsdkProductApplicationObject` provides methods to get and set field values on `vsdk_product__c` records. Learn more about user-defined classes (UDC) in the [Vault Developer Portal](https://developer.veevavault.com/sdk/#User_Defined_Classes).
+The `VsdkProductApplicationObject` provides methods to get and set field values on `vsdk_product__c` records. Learn more about user-defined classes (UDC) in the [Vault Developer Portal](https://general.veevavault.dev/vault-sdk/shared-code/udc/).
 
 ## Setup
 
-Deploy the [VPK](https://developer.veevavault.com/sdk/#Deploy_VPK) included within the project. This package contains the configuration and code for this project.
+Deploy the [VPK](https://general.veevavault.dev/vault-sdk/deploying-code/) included within the project. This package contains the configuration and code for this project.
 To make changes to the code and deploy those changes to a Vault, use the [Vault Java SDK Maven Plugin](https://github.com/veeva/vaultjavasdk-maven-plugin). The pom.xml file includes the plugin details, but you must update the configuration values.
 
 ##Veeva Connect
